@@ -24,6 +24,10 @@ CON
     DYNAMIC_NORM        = 0
     DYNAMIC_HI          = 1
 
+' Measurement modes
+    MMODE_CONT          = 0
+    MMODE_ONE           = 1
+
 VAR
 
 
@@ -94,6 +98,36 @@ PUB IntegrationTime(ms) | tmp
             return
     tmp &= core#MASK_UV_IT
     tmp := (tmp | ms) & core#UV_CONF_MASK
+    tmp.byte[1] := $00
+    writeReg(core#UV_CONF, 2, @tmp)
+
+PUB Measure | tmp
+' Trigger a single measurement
+'   NOTE: For use when MeasureMode is set to MMODE_ONE
+    tmp := $0000
+    readReg(core#UV_CONF, 2, @tmp)
+    tmp &= core#MASK_UV_TRIG    ' Supposed to be cleared by the device automatically - just being thorough
+    tmp.byte[0] |= (1 << core#FLD_UV_TRIG)
+    tmp.byte[1] := $00
+    writeReg(core#UV_CONF, 2, @tmp)
+
+PUB MeasureMode(mode) | tmp
+' Set measurement mode
+'   Valid values:
+'       MMODE_CONT (0): Continuous measurement mode
+'       MMODE_ONE (1): Single-measurement mode only
+'   Any other value polls the chip and returns the current setting
+'   NOTE: In MMODE_ONE mode, measurements must be triggered manually using the Measure method
+    tmp := $0000
+    readReg(core#UV_CONF, 2, @tmp)
+    case mode
+        MMODE_CONT, MMODE_ONE:
+            mode <<= core#FLD_UV_AF
+        OTHER:
+            result := (tmp >> core#FLD_UV_AF) & %1
+            return
+    tmp &= core#MASK_UV_AF
+    tmp := (tmp | mode) & core#UV_CONF_MASK
     tmp.byte[1] := $00
     writeReg(core#UV_CONF, 2, @tmp)
 
