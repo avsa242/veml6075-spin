@@ -29,10 +29,12 @@ VAR
 PUB Main | tmp, i
 
     Setup
-    tmp := %0_000_0_0_0_0
-    uv.writeReg ($00, 1, @tmp)
+
+    uv.IntegrationTime (100)
+    ser.Dec ( uv.IntegrationTime (-2))
+    ser.NewLine
     repeat
-        ser.Position (0, 4)
+        ser.Position (0, 5)
         repeat i from $00 to $0C
             ser.Hex (i, 2)
             ser.Str (string(": "))

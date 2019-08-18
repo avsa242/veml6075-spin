@@ -58,6 +58,24 @@ PUB ID | tmp
     readReg($0C, 2, @tmp)
     return tmp
 
+PUB IntegrationTime(ms) | tmp
+' Set sensor ADC integration time, in ms
+'   Valid values: 50, 100, 200, 400, 800
+'   Any other value polls the chip and returns the current setting
+    tmp := $0000
+    readReg(core#UV_CONF, 2, @tmp)
+    case ms
+        50, 100, 200, 400, 800:
+            ms := lookdownz(ms: 50, 100, 200, 400, 800) << core#FLD_UV_IT
+        OTHER:
+            tmp := (tmp >> core#FLD_UV_IT) & core#BITS_UV_IT
+            result := lookupz(tmp: 50, 100, 200, 400, 800)
+            return
+    tmp &= core#MASK_UV_IT
+    tmp := (tmp | ms) & core#UV_CONF_MASK
+    tmp.byte[1] := $00
+    writeReg(core#UV_CONF, 2, @tmp)
+
 PUB Present | tmp
 
     i2c.Start
