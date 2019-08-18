@@ -43,8 +43,19 @@ PUB Main | tmp, i
     Setup
     _row := 1
 
+    HD (1)
     UV_IT (1)
     Flash (LED, 100)
+
+PUB HD(reps) | tmp, read
+
+    _expanded := TRUE
+    _row++
+    repeat reps
+        repeat tmp from 0 to 1
+            uv.Dynamic (tmp)
+            read := uv.Dynamic (-2)
+            Message (string("HD"), tmp, read)
 
 PUB UV_IT(reps) | tmp, read
 

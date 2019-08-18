@@ -12,13 +12,17 @@
 
 CON
 
-    SLAVE_WR          = core#SLAVE_ADDR
-    SLAVE_RD          = core#SLAVE_ADDR|1
+    SLAVE_WR            = core#SLAVE_ADDR
+    SLAVE_RD            = core#SLAVE_ADDR|1
 
-    DEF_SCL           = 28
-    DEF_SDA           = 29
-    DEF_HZ            = 400_000
-    I2C_MAX_FREQ      = core#I2C_MAX_FREQ
+    DEF_SCL             = 28
+    DEF_SDA             = 29
+    DEF_HZ              = 400_000
+    I2C_MAX_FREQ        = core#I2C_MAX_FREQ
+
+' Dynamic settings
+    DYNAMIC_NORM        = 0
+    DYNAMIC_HI          = 1
 
 VAR
 
@@ -51,6 +55,23 @@ PUB Startx(SCL_PIN, SDA_PIN, I2C_HZ): okay | tmp
 PUB Stop
 ' Put any other housekeeping code here required/recommended by your device before shutting down
     i2c.terminate
+
+PUB Dynamic(level) | tmp
+' Set sensor dynamic
+'   Valid values: DYNAMIC_NORM (0), DYNAMIC_HI (1)
+'   Any other value polls the chip and returns the current setting
+    tmp := $0000
+    readReg(core#UV_CONF, 2, @tmp)
+    case level
+        DYNAMIC_NORM, DYNAMIC_HI:
+            level <<= core#FLD_HD
+        OTHER:
+            result := (tmp >> core#FLD_HD) & %1
+            return
+    tmp &= core#MASK_HD
+    tmp := (tmp | level) & core#UV_CONF_MASK
+    tmp.byte[1] := $00
+    writeReg(core#UV_CONF, 2, @tmp)
 
 PUB ID | tmp
 
