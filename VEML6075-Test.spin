@@ -43,10 +43,22 @@ PUB Main | tmp, i
     Setup
     _row := 1
 
+    SD (1)
     UV_AF (1)
     HD (1)
     UV_IT (1)
     Flash (LED, 100)
+
+PUB SD(reps) | tmp, read
+
+    _expanded := TRUE
+    _row++
+    repeat reps
+        repeat tmp from -1 to 0
+            uv.Power (tmp)
+            read := uv.Power (-2)
+            Message (string("SD"), tmp, read)
+    uv.Power (TRUE)
 
 PUB UV_AF(reps) | tmp, read
 

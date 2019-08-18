@@ -131,6 +131,25 @@ PUB MeasureMode(mode) | tmp
     tmp.byte[1] := $00
     writeReg(core#UV_CONF, 2, @tmp)
 
+PUB Power(enabled) | tmp
+' Power on sensor
+'   Valid values:
+'       TRUE (-1 or 1): Power on
+'       FALSE (0): Power off
+'   Any other value polls the chip and returns the current setting
+    tmp := $0000
+    readReg(core#UV_CONF, 2, @tmp)
+    case ||enabled
+        0, 1:
+            enabled := ||enabled & %1
+        OTHER:
+            return (tmp & %1) * TRUE
+
+    tmp &= core#MASK_SD
+    tmp := (tmp | enabled) & core#UV_CONF_MASK
+    tmp.byte[1] := $00
+    writeReg(core#UV_CONF, 2, @tmp)
+
 PUB Present | tmp
 
     i2c.Start
