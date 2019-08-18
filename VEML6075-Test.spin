@@ -15,6 +15,17 @@ CON
     _clkmode    = cfg#_clkmode
     _xinfreq    = cfg#_xinfreq
 
+    COL_REG     = 0
+    COL_SET     = 25
+    COL_READ    = 37
+    COL_PF      = 52
+
+    LED         = cfg#LED1
+
+    SCL_PIN     = 28
+    SDA_PIN     = 29
+    I2C_HZ      = 400_000
+
 OBJ
 
     cfg     : "core.con.boardcfg.flip"
@@ -24,31 +35,92 @@ OBJ
 
 VAR
 
-    byte _ser_cog
+    long _fails, _expanded
+    byte _ser_cog, _row
 
 PUB Main | tmp, i
 
     Setup
+    _row := 1
 
-    uv.IntegrationTime (100)
-    ser.Dec ( uv.IntegrationTime (-2))
-    ser.NewLine
-    repeat
-        ser.Position (0, 5)
-        repeat i from $00 to $0C
-            ser.Hex (i, 2)
-            ser.Str (string(": "))
-            uv.readReg (i, 2, @tmp)'(reg, nr_bytes, buff_addr)
-            ser.Hex (tmp, 4)
+    UV_IT (1)
+    Flash (LED, 100)
+
+PUB UV_IT(reps) | tmp, read
+
+    _expanded := TRUE
+    _row++
+    repeat reps
+        repeat tmp from 1 to 5
+            uv.IntegrationTime (lookup(tmp: 50, 100, 200, 400, 800))
+            read := uv.IntegrationTime (-2)
+            Message (string("UV_IT"), lookup(tmp: 50, 100, 200, 400, 800), read)
+
+PUB Dumpregs | i, tmp
+
+    repeat i from $00 to $0C
+        ser.Hex (i, 2)
+        ser.Str (string(": "))
+        uv.readReg (i, 2, @tmp)
+        ser.Hex (tmp, 4)
+        ser.NewLine
+
+PUB Message(field, arg1, arg2)
+
+    case _expanded
+        TRUE:
+            ser.PositionX (COL_REG)
+            ser.Str (field)
+
+            ser.PositionX (COL_SET)
+            ser.Str (string("SET: "))
+            ser.Dec (arg1)
+
+            ser.PositionX (COL_READ)
+            ser.Str (string("READ: "))
+            ser.Dec (arg2)
+            ser.Chars (32, 3)
+            ser.PositionX (COL_PF)
+            PassFail (arg1 == arg2)
             ser.NewLine
-        time.MSleep (200)
+
+        FALSE:
+            ser.Position (COL_REG, _row)
+            ser.Str (field)
+
+            ser.Position (COL_SET, _row)
+            ser.Str (string("SET: "))
+            ser.Dec (arg1)
+
+            ser.Position (COL_READ, _row)
+            ser.Str (string("READ: "))
+            ser.Dec (arg2)
+
+            ser.Position (COL_PF, _row)
+            PassFail (arg1 == arg2)
+            ser.NewLine
+        OTHER:
+            ser.Str (string("DEADBEEF"))
+
+PUB PassFail(num)
+
+    case num
+        0:
+            ser.Str (string("FAIL"))
+            _fails++
+
+        -1:
+            ser.Str (string("PASS"))
+
+        OTHER:
+            ser.Str (string("???"))
 
 PUB Setup
 
     repeat until _ser_cog := ser.Start (115_200)
     ser.Clear
     ser.Str(string("Serial terminal started", ser#NL))
-    if uv.Startx (28, 29, 400_000)
+    if uv.Startx (SCL_PIN, SDA_PIN, I2C_HZ)
         ser.Str (string("VEML6075 driver started", ser#NL))
     else
         ser.Str (string("VEML6075 driver failed to start - halting", ser#NL))
@@ -56,6 +128,13 @@ PUB Setup
         time.MSleep (500)
         ser.Stop
         repeat
+
+PUB Flash(pin, delay_ms)
+
+    dira[pin] := 1
+    repeat
+        !outa[pin]
+        time.MSleep (delay_ms)
 
 DAT
 {
