@@ -1,11 +1,11 @@
 {
     --------------------------------------------
     Filename: sensor.uv.veml6075.i2c.spin
-    Author:
-    Description:
+    Author: Jesse Burt
+    Description: Driver for the Vishay VEML6075 UVA/UVB sensor
     Copyright (c) 2019
     Started Aug 18, 2019
-    Updated Aug 18, 2019
+    Updated Aug 19, 2019
     See end of file for terms of use.
     --------------------------------------------
 }
@@ -141,7 +141,7 @@ PUB Power(enabled) | tmp
     readReg(core#UV_CONF, 2, @tmp)
     case ||enabled
         0, 1:
-            enabled := ||enabled & %1
+            enabled := (||enabled ^ 1) & %1
         OTHER:
             return (tmp & %1) * TRUE
 
@@ -157,6 +157,26 @@ PUB Present | tmp
     i2c.Stop
     result := (tmp == i2c#ACK)
 
+PUB UVA
+' Read UV-A sensor data
+'   Returns: 16-bit word
+    readReg(core#UVA_DATA, 2, @result)
+
+PUB UVB
+' Read UV-B sensor data
+'   Returns: 16-bit word
+    readReg(core#UVB_DATA, 2, @result)
+
+PUB Visible
+' Read Visible sensor data
+'   Returns: 16-bit word
+    readReg(core#UVCOMP1, 2, @result)
+
+PUB IR
+' Read Infrared sensor data
+'   Returns: 16-bit word
+    readReg(core#UVCOMP2, 2, @result)
+
 PUB readReg(reg, nr_bytes, buff_addr) | cmd_packet, tmp
 '' Read num_bytes from the slave device into the address stored in buff_addr
     case reg                                                    'Basic register validation
@@ -165,8 +185,7 @@ PUB readReg(reg, nr_bytes, buff_addr) | cmd_packet, tmp
             cmd_packet.byte[1] := reg
             i2c.start
             i2c.wr_block (@cmd_packet, 2)
-            i2c.start
-            i2c.write (SLAVE_RD)
+            i2c.Wait (SLAVE_RD)
             i2c.rd_block (buff_addr, nr_bytes, TRUE)
             i2c.stop
         OTHER:
