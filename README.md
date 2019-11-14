@@ -1,17 +1,23 @@
 # veml6075-spin 
 ---------------
 
-This is a P8X32A/Propeller driver object for the Vishay VEML6075 UVA/B sensor.
+This is a P8X32A/Propeller 1, P2X8C4M64P/Propeller 2 driver object for the Vishay VEML6075 UVA/B sensor.
 
 ## Salient Features
 
 * I2C connection up to 400kHz
 * Reads UVA, UVB, Visible, IR sensor data
 * Supports changing ADC integration time
+* Supports continuous or single-measurement modes
 
 ## Requirements
 
-* 1 extra core/cog for the PASM I2C driver
+* P1: 1 extra core/cog for the PASM I2C driver
+* P2: N/A
+
+## Compiler Compatibility
+
+- [ ] FastSpin (tested with 4.0.3-beta)
 
 ## Limitations
 
