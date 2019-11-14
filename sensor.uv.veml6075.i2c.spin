@@ -177,7 +177,7 @@ PUB IR
 '   Returns: 16-bit word
     readReg(core#UVCOMP2, 2, @result)
 
-PUB readReg(reg, nr_bytes, buff_addr) | cmd_packet, tmp
+PRI readReg(reg, nr_bytes, buff_addr) | cmd_packet, tmp
 '' Read num_bytes from the slave device into the address stored in buff_addr
     case reg                                                    'Basic register validation
         core#UV_CONF, core#UVA_DATA..core#DEV_ID:
@@ -191,7 +191,7 @@ PUB readReg(reg, nr_bytes, buff_addr) | cmd_packet, tmp
         OTHER:
             return
 
-PUB writeReg(reg, nr_bytes, buff_addr) | cmd_packet, tmp
+PRI writeReg(reg, nr_bytes, buff_addr) | cmd_packet, tmp
 '' Write num_bytes to the slave device from the address stored in buff_addr
     case reg                                                    'Basic register validation
         core#UV_CONF:

@@ -1,8 +1,8 @@
 {
     --------------------------------------------
-    Filename: VEML6075-Test.spin
+    Filename: VEML6075-Demo.spin
     Author: Jesse Burt
-    Description: Test of the VEML6075 driver
+    Description: Demo of the VEML6075 driver
     Copyright (c) 2019
     Started Aug 18, 2019
     Updated Aug 19, 2019
@@ -23,6 +23,9 @@ CON
 
     TEXT_COL    = 0
     DATA_COL    = 9
+
+    UVA_RESP    = 0_001461  '0.001461
+    UVB_RESP    = 0_002591  '0.002591
 
 OBJ
 
@@ -45,6 +48,26 @@ PUB Main | uva, uvb, vis, ir, i
     uv.IntegrationTime (100)
     uv.MeasureMode (uv#MMODE_CONT)
 
+    repeat
+        ser.Position (TEXT_COL, 5)
+        ser.Str (string("UVI:"))
+        ser.Position (DATA_COL, 5)
+        ser.Str (string("0.000000"))
+        ser.Str(int.DecPadded (UVI, 10))
+        ser.NewLine
+{
+        ser.Position (TEXT_COL, 5)
+        ser.Str (string("UVA:"))
+        ser.Position (DATA_COL, 5)
+        ser.Str(int.DecPadded (UVACalc(uv.UVA), 5))
+        ser.NewLine
+
+        ser.Position (TEXT_COL, 6)
+        ser.Str (string("UVB:"))
+        ser.Position (DATA_COL, 6)
+        ser.Str(int.DecPadded (UVBCalc(uv.UVB), 5))
+        ser.NewLine
+}
     repeat
         uva := uv.UVA
         uvb := uv.UVB
@@ -75,6 +98,30 @@ PUB Main | uva, uvb, vis, ir, i
         ser.Str(int.DecPadded (ir, 5))
         time.MSleep (50)
     Flash (LED, 100)
+
+PUB UVACalc(uva_raw) | uva, a, b, uvcomp1, uvcomp2
+
+    a := 2_22   '2.22
+    b := 1_33   '1.33
+
+    uva := uva_raw
+    uvcomp1 := uv.Visible
+    uvcomp2 := uv.IR
+    result := uva - (a * uvcomp1) - (b * uvcomp2)
+
+PUB UVBCalc(uvb_raw) | uvb, c, d, uvcomp1, uvcomp2
+
+    c := 2_95   '2.95
+    d := 1_74   '1.74
+
+    uvb := uvb_raw
+    uvcomp1 := uv.Visible
+    uvcomp2 := uv.IR
+    result := uvb - (c * uvcomp1) - (d * uvcomp2)
+
+PUB UVI
+
+    return ((UVACalc(uv.UVA) * UVA_RESP) + (UVBCalc(uv.UVB) * UVB_RESP)) / 2
 
 PUB Setup
 
