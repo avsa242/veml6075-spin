@@ -50,7 +50,7 @@ PUB Startx(SCL_PIN, SDA_PIN, I2C_HZ): okay | tmp
         if I2C_HZ =< core#I2C_MAX_FREQ
             if okay := i2c.setupx (SCL_PIN, SDA_PIN, I2C_HZ)    'I2C Object Started?
                 time.MSleep (100)
-                if Present
+                if present
                     if DeviceID == core#DEV_ID_RESP
                         return okay
 
@@ -150,13 +150,6 @@ PUB Power(enabled) | tmp
     tmp.byte[1] := $00
     writeReg(core#UV_CONF, 2, @tmp)
 
-PUB Present | tmp
-' Flag indicating the device responds on the I2C bus
-    i2c.Start
-    tmp := i2c.Write (SLAVE_WR)
-    i2c.Stop
-    result := (tmp == i2c#ACK)
-
 PUB UVAData
 ' Read UV-A sensor data
 '   Returns: 16-bit word
@@ -176,6 +169,13 @@ PUB IRData
 ' Read Infrared sensor data
 '   Returns: 16-bit word
     readReg(core#UVCOMP2, 2, @result)
+
+PRI present | tmp
+' Flag indicating the device responds on the I2C bus
+    i2c.Start
+    tmp := i2c.Write (SLAVE_WR)
+    i2c.Stop
+    result := (tmp == i2c#ACK)
 
 PRI readReg(reg, nr_bytes, buff_addr) | cmd_packet, tmp
 '' Read num_bytes from the slave device into the address stored in buff_addr
