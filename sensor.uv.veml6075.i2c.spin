@@ -51,7 +51,7 @@ PUB Startx(SCL_PIN, SDA_PIN, I2C_HZ): okay | tmp
             if okay := i2c.setupx (SCL_PIN, SDA_PIN, I2C_HZ)    'I2C Object Started?
                 time.MSleep (100)
                 if Present
-                    if ID == core#DEV_ID_RESP
+                    if DeviceID == core#DEV_ID_RESP
                         return okay
 
     return FALSE                                                'If we got here, something went wrong
@@ -59,6 +59,12 @@ PUB Startx(SCL_PIN, SDA_PIN, I2C_HZ): okay | tmp
 PUB Stop
 ' Put any other housekeeping code here required/recommended by your device before shutting down
     i2c.terminate
+
+PUB DeviceID
+' Device ID of the chip
+'   Known values: $0026
+    result := $0000
+    readReg(core#DEV_ID, 2, @result)
 
 PUB Dynamic(level) | tmp
 ' Set sensor dynamic
@@ -76,12 +82,6 @@ PUB Dynamic(level) | tmp
     tmp := (tmp | level) & core#UV_CONF_MASK
     tmp.byte[1] := $00
     writeReg(core#UV_CONF, 2, @tmp)
-
-PUB ID | tmp
-
-    tmp := $0000
-    readReg($0C, 2, @tmp)
-    return tmp
 
 PUB IntegrationTime(ms) | tmp
 ' Set sensor ADC integration time, in ms
@@ -151,28 +151,28 @@ PUB Power(enabled) | tmp
     writeReg(core#UV_CONF, 2, @tmp)
 
 PUB Present | tmp
-
+' Flag indicating the device responds on the I2C bus
     i2c.Start
     tmp := i2c.Write (SLAVE_WR)
     i2c.Stop
     result := (tmp == i2c#ACK)
 
-PUB UVA
+PUB UVAData
 ' Read UV-A sensor data
 '   Returns: 16-bit word
     readReg(core#UVA_DATA, 2, @result)
 
-PUB UVB
+PUB UVBData
 ' Read UV-B sensor data
 '   Returns: 16-bit word
     readReg(core#UVB_DATA, 2, @result)
 
-PUB Visible
+PUB VisibleData
 ' Read Visible sensor data
 '   Returns: 16-bit word
     readReg(core#UVCOMP1, 2, @result)
 
-PUB IR
+PUB IRData
 ' Read Infrared sensor data
 '   Returns: 16-bit word
     readReg(core#UVCOMP2, 2, @result)

@@ -30,8 +30,9 @@ CON
 OBJ
 
     cfg     : "core.con.boardcfg.flip"
-    ser     : "com.serial.terminal"
+    ser     : "com.serial.terminal.ansi"
     time    : "time"
+    io      : "io"
     uv      : "sensor.uv.veml6075.i2c"
     int     : "string.integer"
 
@@ -48,6 +49,7 @@ PUB Main | uva, uvb, vis, ir, i
     uv.IntegrationTime (100)
     uv.MeasureMode (uv#MMODE_CONT)
 
+
     repeat
         ser.Position (TEXT_COL, 5)
         ser.Str (string("UVI:"))
@@ -59,20 +61,20 @@ PUB Main | uva, uvb, vis, ir, i
         ser.Position (TEXT_COL, 5)
         ser.Str (string("UVA:"))
         ser.Position (DATA_COL, 5)
-        ser.Str(int.DecPadded (UVACalc(uv.UVA), 5))
+        ser.Str(int.DecPadded (UVACalc(uv.UVAData), 5))
         ser.NewLine
 
         ser.Position (TEXT_COL, 6)
         ser.Str (string("UVB:"))
         ser.Position (DATA_COL, 6)
-        ser.Str(int.DecPadded (UVBCalc(uv.UVB), 5))
+        ser.Str(int.DecPadded (UVBCalc(uv.UVBData), 5))
         ser.NewLine
 }
     repeat
-        uva := uv.UVA
-        uvb := uv.UVB
-        vis := uv.Visible
-        ir := uv.IR
+        uva := uv.UVAData
+        uvb := uv.UVBData
+        vis := uv.VisibleData
+        ir := uv.IRData
 
         ser.Position (TEXT_COL, 5)
         ser.Str (string("UVA:"))
@@ -97,7 +99,7 @@ PUB Main | uva, uvb, vis, ir, i
         ser.Position (DATA_COL, 8)
         ser.Str(int.DecPadded (ir, 5))
         time.MSleep (50)
-    Flash (LED, 100)
+    FlashLED (LED, 100)
 
 PUB UVACalc(uva_raw) | uva, a, b, uvcomp1, uvcomp2
 
@@ -105,8 +107,8 @@ PUB UVACalc(uva_raw) | uva, a, b, uvcomp1, uvcomp2
     b := 1_33   '1.33
 
     uva := uva_raw
-    uvcomp1 := uv.Visible
-    uvcomp2 := uv.IR
+    uvcomp1 := uv.VisibleData
+    uvcomp2 := uv.IRData
     result := uva - (a * uvcomp1) - (b * uvcomp2)
 
 PUB UVBCalc(uvb_raw) | uvb, c, d, uvcomp1, uvcomp2
@@ -115,34 +117,29 @@ PUB UVBCalc(uvb_raw) | uvb, c, d, uvcomp1, uvcomp2
     d := 1_74   '1.74
 
     uvb := uvb_raw
-    uvcomp1 := uv.Visible
-    uvcomp2 := uv.IR
+    uvcomp1 := uv.VisibleData
+    uvcomp2 := uv.IRData
     result := uvb - (c * uvcomp1) - (d * uvcomp2)
 
 PUB UVI
 
-    return ((UVACalc(uv.UVA) * UVA_RESP) + (UVBCalc(uv.UVB) * UVB_RESP)) / 2
+    return ((UVACalc(uv.UVAData) * UVA_RESP) + (UVBCalc(uv.UVBData) * UVB_RESP)) / 2
 
 PUB Setup
 
     repeat until _ser_cog := ser.Start (115_200)
     ser.Clear
-    ser.Str(string("Serial terminal started", ser#NL))
+    ser.Str(string("Serial terminal started", ser#CR, ser#LF))
     if uv.Startx (SCL_PIN, SDA_PIN, I2C_HZ)
-        ser.Str (string("VEML6075 driver started", ser#NL))
+        ser.Str (string("VEML6075 driver started", ser#CR, ser#LF))
     else
-        ser.Str (string("VEML6075 driver failed to start - halting", ser#NL))
+        ser.Str (string("VEML6075 driver failed to start - halting", ser#CR, ser#LF))
         uv.Stop
         time.MSleep (500)
         ser.Stop
-        Flash (LED, 500)
+        FlashLED (LED, 500)
 
-PUB Flash(pin, delay_ms)
-
-    dira[pin] := 1
-    repeat
-        !outa[pin]
-        time.MSleep (delay_ms)
+#include "lib.utility.spin"
 
 DAT
 {
