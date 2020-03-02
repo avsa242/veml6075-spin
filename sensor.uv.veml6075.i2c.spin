@@ -25,8 +25,8 @@ CON
     DYNAMIC_HI          = 1
 
 ' Measurement modes
-    MMODE_CONT          = 0
-    MMODE_ONE           = 1
+    CONT                = 0
+    SINGLE              = 1
 
 VAR
 
@@ -57,7 +57,9 @@ PUB Startx(SCL_PIN, SDA_PIN, I2C_HZ): okay | tmp
     return FALSE                                                'If we got here, something went wrong
 
 PUB Stop
-' Put any other housekeeping code here required/recommended by your device before shutting down
+
+    Powered(FALSE)
+    time.MSleep(1)
     i2c.terminate
 
 PUB DeviceID
@@ -103,7 +105,7 @@ PUB IntegrationTime(ms) | tmp
 
 PUB Measure | tmp
 ' Trigger a single measurement
-'   NOTE: For use when MeasureMode is set to MMODE_ONE
+'   NOTE: For use when MeasureMode is set to SINGLE
     tmp := $0000
     readReg(core#UV_CONF, 2, @tmp)
     tmp &= core#MASK_UV_TRIG    ' Supposed to be cleared by the device automatically - just being thorough
@@ -111,17 +113,17 @@ PUB Measure | tmp
     tmp.byte[1] := $00
     writeReg(core#UV_CONF, 2, @tmp)
 
-PUB MeasureMode(mode) | tmp
+PUB OpMode(mode) | tmp
 ' Set measurement mode
 '   Valid values:
-'       MMODE_CONT (0): Continuous measurement mode
-'       MMODE_ONE (1): Single-measurement mode only
+'       CONT (0): Continuous measurement mode
+'       SINGLE (1): Single-measurement mode only
 '   Any other value polls the chip and returns the current setting
 '   NOTE: In MMODE_ONE mode, measurements must be triggered manually using the Measure method
     tmp := $0000
     readReg(core#UV_CONF, 2, @tmp)
     case mode
-        MMODE_CONT, MMODE_ONE:
+        CONT, SINGLE:
             mode <<= core#FLD_UV_AF
         OTHER:
             result := (tmp >> core#FLD_UV_AF) & %1
@@ -131,7 +133,7 @@ PUB MeasureMode(mode) | tmp
     tmp.byte[1] := $00
     writeReg(core#UV_CONF, 2, @tmp)
 
-PUB Power(enabled) | tmp
+PUB Powered(enabled) | tmp
 ' Power on sensor
 '   Valid values:
 '       TRUE (-1 or 1): Power on
