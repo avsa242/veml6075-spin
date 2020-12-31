@@ -50,7 +50,7 @@ PUB Startx(SCL_PIN, SDA_PIN, I2C_HZ): okay | tmp
         if I2C_HZ =< core#I2C_MAX_FREQ
             if okay := i2c.setupx(SCL_PIN, SDA_PIN, I2C_HZ)
                 time.msleep(100)
-                if present
+                if present{}                    ' check device bus presence
                     if deviceid{} == core#DEV_ID_RESP
                         return okay
 
@@ -62,122 +62,122 @@ PUB Stop{}
     time.msleep(1)
     i2c.terminate{}
 
-PUB DeviceID{}
+PUB DeviceID{}: id
 ' Device ID of the chip
 '   Known values: $0026
-    result := 0
-    readreg(core#DEV_ID, 2, @result)
+    id := 0
+    readreg(core#DEV_ID, 2, @id)
 
-PUB Dynamic(level) | tmp
+PUB Dynamic(level): curr_lvl
 ' Set sensor dynamic
 '   Valid values: DYNAMIC_NORM (0), DYNAMIC_HI (1)
 '   Any other value polls the chip and returns the current setting
-    tmp := 0
-    readreg(core#UV_CONF, 2, @tmp)
+    curr_lvl := 0
+    readreg(core#UV_CONF, 2, @curr_lvl)
     case level
         DYNAMIC_NORM, DYNAMIC_HI:
             level <<= core#HD
         other:
-            result := (tmp >> core#HD) & 1
-            return
-    tmp &= core#HD
-    tmp := (tmp | level) & core#UV_CONF_MASK
-    tmp.byte[1] := 0
-    writereg(core#UV_CONF, 2, @tmp)
+            return (curr_lvl >> core#HD) & 1
 
-PUB IntegrationTime(ms) | tmp
+    curr_lvl &= core#HD
+    curr_lvl := (curr_lvl | level) & core#UV_CONF_MASK
+    curr_lvl.byte[1] := 0
+    writereg(core#UV_CONF, 2, @curr_lvl)
+
+PUB IntegrationTime(itime): curr_itime
 ' Set sensor ADC integration time, in ms
 '   Valid values: 50, 100, 200, 400, 800
 '   Any other value polls the chip and returns the current setting
-    tmp := 0
-    readreg(core#UV_CONF, 2, @tmp)
-    case ms
+    curr_itime := 0
+    readreg(core#UV_CONF, 2, @curr_itime)
+    case itime
         50, 100, 200, 400, 800:
-            ms := lookdownz(ms: 50, 100, 200, 400, 800) << core#UV_IT
+            itime := lookdownz(itime: 50, 100, 200, 400, 800) << core#UV_IT
         other:
-            tmp := (tmp >> core#UV_IT) & core#UV_IT
-            result := lookupz(tmp: 50, 100, 200, 400, 800)
-            return
-    tmp &= core#UV_IT
-    tmp := (tmp | ms) & core#UV_CONF_MASK
-    tmp.byte[1] := 0
-    writereg(core#UV_CONF, 2, @tmp)
+            curr_itime := (curr_itime >> core#UV_IT) & core#UV_IT
+            return lookupz(curr_itime: 50, 100, 200, 400, 800)
+
+    curr_itime &= core#UV_IT
+    curr_itime := (curr_itime | itime) & core#UV_CONF_MASK
+    curr_itime.byte[1] := 0
+    writereg(core#UV_CONF, 2, @curr_itime)
 
 PUB Measure{} | tmp
 ' Trigger a single measurement
-'   NOTE: For use when MeasureMode is set to SINGLE
+'   NOTE: For use when OpMode() is set to SINGLE
     tmp := 0
     readreg(core#UV_CONF, 2, @tmp)
-    tmp &= core#UV_TRIG    ' Supposed to be cleared by the device automatically - just being thorough
     tmp.byte[0] |= (1 << core#UV_TRIG)
     tmp.byte[1] := 0
     writereg(core#UV_CONF, 2, @tmp)
 
-PUB OpMode(mode) | tmp
+PUB OpMode(mode): curr_mode
 ' Set measurement mode
 '   Valid values:
 '       CONT (0): Continuous measurement mode
-'       SINGLE (1): Single-measurement mode only
+'       SINGLE (1): Single-measurement mode
 '   Any other value polls the chip and returns the current setting
-'   NOTE: In MMODE_ONE mode, measurements must be triggered manually using the Measure method
-    tmp := 0
-    readreg(core#UV_CONF, 2, @tmp)
+'   NOTE: In SINGLE mode, measurements must be triggered manually using the
+'       Measure() method
+    curr_mode := 0
+    readreg(core#UV_CONF, 2, @curr_mode)
     case mode
         CONT, SINGLE:
             mode <<= core#UV_AF
         other:
-            result := (tmp >> core#UV_AF) & 1
-            return
-    tmp &= core#UV_AF
-    tmp := (tmp | mode) & core#UV_CONF_MASK
-    tmp.byte[1] := 0
-    writereg(core#UV_CONF, 2, @tmp)
+            return (curr_mode >> core#UV_AF) & 1
 
-PUB Powered(enabled) | tmp
+    curr_mode &= core#UV_AF_MASK
+    curr_mode := (curr_mode | mode) & core#UV_CONF_MASK
+    curr_mode.byte[1] := 0
+    writereg(core#UV_CONF, 2, @curr_mode)
+
+PUB Powered(state): curr_state
 ' Power on sensor
 '   Valid values:
 '       TRUE (-1 or 1): Power on
 '       FALSE (0): Power off
 '   Any other value polls the chip and returns the current setting
-    tmp := 0
-    readreg(core#UV_CONF, 2, @tmp)
-    case ||(enabled)
+    curr_state := 0
+    readreg(core#UV_CONF, 2, @curr_state)
+    case ||(state)
         0, 1:
-            enabled := (||(enabled) ^ 1) & 1
-        other:
-            return (tmp & 1) * TRUE
+            state := (||(state) ^ 1) & 1        ' logic on chip is inverted,
+        other:                                  ' so flip the bit
+            return ((curr_state & 1) == 1)
 
-    tmp &= core#SD
-    tmp := (tmp | enabled) & core#UV_CONF_MASK
-    tmp.byte[1] := 0
-    writereg(core#UV_CONF, 2, @tmp)
+    curr_state &= core#SD_MASK
+    curr_state := (curr_state | state) & core#UV_CONF_MASK
+    curr_state.byte[1] := 0
+    writereg(core#UV_CONF, 2, @curr_state)
 
-PUB UVAData
+PUB UVAData{}: uva
 ' Read UV-A sensor data
 '   Returns: 16-bit word
-    readreg(core#UVA_DATA, 2, @result)
+    readreg(core#UVA_DATA, 2, @uva)
 
-PUB UVBData
+PUB UVBData{}: uvb
 ' Read UV-B sensor data
 '   Returns: 16-bit word
-    readreg(core#UVB_DATA, 2, @result)
+    readreg(core#UVB_DATA, 2, @uvb)
 
-PUB VisibleData
+PUB VisibleData{}: vis
 ' Read Visible sensor data
 '   Returns: 16-bit word
-    readreg(core#UVCOMP1, 2, @result)
+    readreg(core#UVCOMP1, 2, @vis)
 
-PUB IRData
+PUB IRData{}: ir
 ' Read Infrared sensor data
 '   Returns: 16-bit word
-    readreg(core#UVCOMP2, 2, @result)
+    readreg(core#UVCOMP2, 2, @ir)
 
-PRI present{} | tmp
+PRI present{}: flag
 ' Flag indicating the device responds on the I2C bus
     i2c.start{}
-    tmp := i2c.write(SLAVE_WR)
+    flag := i2c.write(SLAVE_WR)
     i2c.stop{}                                  ' <P> needed by this device
-    result := (tmp == i2c#ACK)
+    return (flag == i2c#ACK)
 
 PRI readreg(reg_nr, nr_bytes, ptr_buff) | cmd_pkt, tmp
 ' Read nr_bytes from slave device into ptr_buff
