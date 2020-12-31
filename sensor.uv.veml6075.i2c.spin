@@ -80,7 +80,6 @@ PUB Dynamic(level): curr_lvl
         other:
             return (curr_lvl >> core#HD) & 1
 
-    curr_lvl.byte[1] := 0   ' XXX why?
     level := ((curr_lvl & core#HD_MASK) | level) & core#UV_CONF_MASK
     writereg(core#UV_CONF, 2, @level)
 
@@ -97,7 +96,6 @@ PUB IntegrationTime(itime): curr_itime
             curr_itime := (curr_itime >> core#UV_IT) & core#UV_IT
             return lookupz(curr_itime: 50, 100, 200, 400, 800)
 
-    curr_itime.byte[1] := 0 ' XXX why?
     itime := ((curr_itime & core#UV_IT_MASK) | itime) & core#UV_CONF_MASK
     writereg(core#UV_CONF, 2, @itime)
 
@@ -126,7 +124,6 @@ PUB OpMode(mode): curr_mode
         other:
             return (curr_mode >> core#UV_AF) & 1
 
-    curr_mode.byte[1] := 0  'XXX why?
     mode := ((curr_mode & core#UV_AF_MASK) | mode) & core#UV_CONF_MASK
     writereg(core#UV_CONF, 2, @mode)
 
@@ -144,7 +141,6 @@ PUB Powered(state): curr_state
         other:                                  ' so flip the bit
             return ((curr_state & 1) == 1)
 
-    curr_state.byte[1] := 0 'XXX why?
     state := ((curr_state & core#SD_MASK) | state) & core#UV_CONF_MASK
     writereg(core#UV_CONF, 2, @state)
 
