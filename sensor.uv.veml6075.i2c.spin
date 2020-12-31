@@ -3,9 +3,9 @@
     Filename: sensor.uv.veml6075.i2c.spin
     Author: Jesse Burt
     Description: Driver for the Vishay VEML6075 UVA/UVB sensor
-    Copyright (c) 2019
+    Copyright (c) 2020
     Started Aug 18, 2019
-    Updated Aug 19, 2019
+    Updated Dec 31, 2020
     See end of file for terms of use.
     --------------------------------------------
 }
@@ -17,7 +17,7 @@ CON
 
     DEF_SCL             = 28
     DEF_SDA             = 29
-    DEF_HZ              = 400_000
+    DEF_HZ              = 100_000
     I2C_MAX_FREQ        = core#I2C_MAX_FREQ
 
 ' Dynamic settings
@@ -76,11 +76,11 @@ PUB Dynamic(level) | tmp
     readReg(core#UV_CONF, 2, @tmp)
     case level
         DYNAMIC_NORM, DYNAMIC_HI:
-            level <<= core#FLD_HD
+            level <<= core#HD
         OTHER:
-            result := (tmp >> core#FLD_HD) & %1
+            result := (tmp >> core#HD) & %1
             return
-    tmp &= core#MASK_HD
+    tmp &= core#HD_MASK
     tmp := (tmp | level) & core#UV_CONF_MASK
     tmp.byte[1] := $00
     writeReg(core#UV_CONF, 2, @tmp)
@@ -93,12 +93,12 @@ PUB IntegrationTime(ms) | tmp
     readReg(core#UV_CONF, 2, @tmp)
     case ms
         50, 100, 200, 400, 800:
-            ms := lookdownz(ms: 50, 100, 200, 400, 800) << core#FLD_UV_IT
+            ms := lookdownz(ms: 50, 100, 200, 400, 800) << core#UV_IT
         OTHER:
-            tmp := (tmp >> core#FLD_UV_IT) & core#BITS_UV_IT
+            tmp := (tmp >> core#UV_IT) & core#UV_IT_BITS
             result := lookupz(tmp: 50, 100, 200, 400, 800)
             return
-    tmp &= core#MASK_UV_IT
+    tmp &= core#UV_IT_MASK
     tmp := (tmp | ms) & core#UV_CONF_MASK
     tmp.byte[1] := $00
     writeReg(core#UV_CONF, 2, @tmp)
@@ -108,8 +108,8 @@ PUB Measure | tmp
 '   NOTE: For use when MeasureMode is set to SINGLE
     tmp := $0000
     readReg(core#UV_CONF, 2, @tmp)
-    tmp &= core#MASK_UV_TRIG    ' Supposed to be cleared by the device automatically - just being thorough
-    tmp.byte[0] |= (1 << core#FLD_UV_TRIG)
+    tmp &= core#UV_TRIG_MASK    ' Supposed to be cleared by the device automatically - just being thorough
+    tmp.byte[0] |= (1 << core#UV_TRIG)
     tmp.byte[1] := $00
     writeReg(core#UV_CONF, 2, @tmp)
 
@@ -124,11 +124,11 @@ PUB OpMode(mode) | tmp
     readReg(core#UV_CONF, 2, @tmp)
     case mode
         CONT, SINGLE:
-            mode <<= core#FLD_UV_AF
+            mode <<= core#UV_AF
         OTHER:
-            result := (tmp >> core#FLD_UV_AF) & %1
+            result := (tmp >> core#UV_AF) & %1
             return
-    tmp &= core#MASK_UV_AF
+    tmp &= core#UV_AF_MASK
     tmp := (tmp | mode) & core#UV_CONF_MASK
     tmp.byte[1] := $00
     writeReg(core#UV_CONF, 2, @tmp)
@@ -147,7 +147,7 @@ PUB Powered(enabled) | tmp
         OTHER:
             return (tmp & %1) * TRUE
 
-    tmp &= core#MASK_SD
+    tmp &= core#SD_MASK
     tmp := (tmp | enabled) & core#UV_CONF_MASK
     tmp.byte[1] := $00
     writeReg(core#UV_CONF, 2, @tmp)
