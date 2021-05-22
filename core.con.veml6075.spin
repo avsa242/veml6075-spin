@@ -3,9 +3,9 @@
     Filename: core.con.veml6075.spin
     Author: Jesse Burt
     Description: Low-level constants
-    Copyright (c) 2020
+    Copyright (c) 2021
     Started Aug 18, 2019
-    Updated Dec 31, 2020
+    Updated May 22, 2021
     See end of file for terms of use.
     --------------------------------------------
 }
@@ -15,6 +15,8 @@ CON
     I2C_MAX_FREQ        = 400_000
     SLAVE_ADDR          = $10 << 1
     DEV_ID_RESP         = $0026
+
+    T_POR               = 100_000               ' usec
 
 ' Register definitions
     UV_CONF             = $00
