@@ -13,22 +13,27 @@
 
 CON
 
-    SLAVE_WR            = core.SLAVE_ADDR
-    SLAVE_RD            = core.SLAVE_ADDR|1
+    SLAVE_WR        = core.SLAVE_ADDR
+    SLAVE_RD        = core.SLAVE_ADDR|1
 
-    DEF_HZ              = 100_000
-    I2C_MAX_FREQ        = core.I2C_MAX_FREQ
+    DEF_HZ          = 100_000
+    I2C_MAX_FREQ    = core.I2C_MAX_FREQ
 
 ' Dynamic settings
-    DYNAMIC_NORM        = 0
-    DYNAMIC_HI          = 1
+    DYNAMIC_NORM    = 0
+    DYNAMIC_HI      = 1
 
 ' Measurement modes
-    CONT                = 0
-    SINGLE              = 1
+    CONT            = 0
+    SINGLE          = 1
 
-VAR
-
+' Coefficients for calculating UV Index
+    CO_A            = 2_22
+    CO_B            = 1_33
+    CO_C            = 2_95
+    CO_D            = 1_74
+    UVA_RESP        = 0_001461
+    UVB_RESP        = 0_002591
 
 OBJ
 
@@ -57,6 +62,13 @@ PUB Stop()
     powered(FALSE)
     waitms(1)
     i2c.deinit()
+
+PUB Preset_Active()
+' Enable sensor power, set to 100ms integration time, continuous measurements
+    powered(TRUE)
+    dynamic(DYNAMIC_NORM)
+    integrationtime(100)
+    opmode(CONT)
 
 PUB DeviceID(): id
 ' Device ID of the chip
@@ -94,6 +106,11 @@ PUB IntegrationTime(itime): curr_itime
 
     itime := ((curr_itime & core.UV_IT_MASK) | itime) & core.UV_CONF_MASK
     writereg(core.UV_CONF, 2, @itime)
+
+PUB IRData(): ir
+' Read Infrared sensor data
+'   Returns: 16-bit word
+    readreg(core.UVCOMP2, 2, @ir)
 
 PUB Measure() | tmp
 ' Trigger a single measurement
@@ -133,7 +150,7 @@ PUB Powered(state): curr_state
     readreg(core.UV_CONF, 2, @curr_state)
     case abs(state)
         0, 1:
-            state := (abs(state) ^ 1) & 1        ' logic on chip is inverted,
+            state := (abs(state) ^ 1) & 1       ' logic on chip is inverted,
         other:                                  ' so flip the bit
             return ((curr_state & 1) == 1)
 
@@ -150,15 +167,21 @@ PUB UVBData(): uvb
 '   Returns: 16-bit word
     readreg(core.UVB_DATA, 2, @uvb)
 
+PUB UVIndex(): uvidx | uva_raw, uva_comp, uvb_raw, uvb_comp, uvcomp1, uvcomp2
+' Return UV Index, in hundredths of a point (e.g. 103 == 1.03)
+    uva_raw := uvadata() * 100
+    uvb_raw := uvbdata() * 100
+    uvcomp1 := visibledata()
+    uvcomp2 := irdata()
+
+    uva_comp := uva_raw - (CO_A * uvcomp1) - (CO_B * uvcomp2)
+    uvb_comp := uvb_raw - (CO_C * uvcomp1) - (CO_D * uvcomp2)
+    return (((uva_comp * UVA_RESP) + (uvb_comp * UVB_RESP)) / 2) / 1_000_000
+
 PUB VisibleData(): vis
 ' Read Visible sensor data
 '   Returns: 16-bit word
     readreg(core.UVCOMP1, 2, @vis)
-
-PUB IRData(): ir
-' Read Infrared sensor data
-'   Returns: 16-bit word
-    readreg(core.UVCOMP2, 2, @ir)
 
 PRI present(): flag
 ' Flag indicating the device responds on the I2C bus
@@ -193,7 +216,6 @@ PRI writereg(reg_nr, nr_bytes, ptr_buff) | cmd_pkt
             i2c.stop()
         other:
             return
-
 
 DAT
 {
