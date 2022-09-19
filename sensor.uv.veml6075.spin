@@ -1,11 +1,11 @@
 {
     --------------------------------------------
-    Filename: sensor.uv.veml6075.i2c.spin
+    Filename: sensor.uv.veml6075.spin
     Author: Jesse Burt
     Description: Driver for the Vishay VEML6075 UVA/UVB sensor
     Copyright (c) 2022
     Started Aug 18, 2019
-    Updated Jan 15, 2022
+    Updated Sep 19, 2022
     See end of file for terms of use.
     --------------------------------------------
 }
@@ -42,14 +42,14 @@ OBJ
     core: "core.con.veml6075"                   ' HW-specific constants
     time: "time"                                ' timekeeping methods
 
-PUB Null{}
+PUB null{}
 ' This is not a top-level object
 
 PUB Start{}: status
 ' Start using "standard" Propeller I2C pins and 100kHz
     return startx(DEF_SCL, DEF_SDA, DEF_HZ)
 
-PUB Startx(SCL_PIN, SDA_PIN, I2C_HZ): status
+PUB startx(SCL_PIN, SDA_PIN, I2C_HZ): status
 ' Start using custom settings
     if lookdown(SCL_PIN: 0..31) and lookdown(SDA_PIN: 0..31) and {
 }   I2C_HZ =< core#I2C_MAX_FREQ
@@ -64,26 +64,26 @@ PUB Startx(SCL_PIN, SDA_PIN, I2C_HZ): status
     ' Lastly - make sure you have at least one free core/cog
     return FALSE
 
-PUB Stop{}
-
+PUB stop{}
+' Stop the driver
     powered(FALSE)
     time.msleep(1)
     i2c.deinit{}
 
-PUB Preset_Active{}
+PUB preset_active{}
 ' Enable sensor power, set to 100ms integration time, continuous measurements
     powered(TRUE)
     dynamic(DYNAMIC_NORM)
     integrationtime(100)
     opmode(CONT)
 
-PUB DeviceID{}: id
+PUB deviceid{}: id
 ' Device ID of the chip
 '   Known values: $0026
     id := 0
     readreg(core#DEV_ID, 2, @id)
 
-PUB Dynamic(level): curr_lvl
+PUB dynamic(level): curr_lvl
 ' Set sensor dynamic
 '   Valid values: DYNAMIC_NORM (0), DYNAMIC_HI (1)
 '   Any other value polls the chip and returns the current setting
@@ -98,7 +98,7 @@ PUB Dynamic(level): curr_lvl
     level := ((curr_lvl & core#HD_MASK) | level) & core#UV_CONF_MASK
     writereg(core#UV_CONF, 2, @level)
 
-PUB IntegrationTime(itime): curr_itime
+PUB integrationtime(itime): curr_itime
 ' Set sensor ADC integration time, in ms
 '   Valid values: 50, 100, 200, 400, 800
 '   Any other value polls the chip and returns the current setting
@@ -114,12 +114,12 @@ PUB IntegrationTime(itime): curr_itime
     itime := ((curr_itime & core#UV_IT_MASK) | itime) & core#UV_CONF_MASK
     writereg(core#UV_CONF, 2, @itime)
 
-PUB IRData{}: ir
+PUB irdata{}: ir
 ' Read Infrared sensor data
 '   Returns: 16-bit word
     readreg(core#UVCOMP2, 2, @ir)
 
-PUB Measure{} | tmp
+PUB measure{} | tmp
 ' Trigger a single measurement
 '   NOTE: For use when OpMode() is set to SINGLE
     tmp := 0
@@ -128,7 +128,7 @@ PUB Measure{} | tmp
     tmp.byte[1] := 0
     writereg(core#UV_CONF, 2, @tmp)
 
-PUB OpMode(mode): curr_mode
+PUB opmode(mode): curr_mode
 ' Set measurement mode
 '   Valid values:
 '       CONT (0): Continuous measurement mode
@@ -147,7 +147,7 @@ PUB OpMode(mode): curr_mode
     mode := ((curr_mode & core#UV_AF_MASK) | mode) & core#UV_CONF_MASK
     writereg(core#UV_CONF, 2, @mode)
 
-PUB Powered(state): curr_state
+PUB powered(state): curr_state
 ' Power on sensor
 '   Valid values:
 '       TRUE (-1 or 1): Power on
@@ -164,17 +164,17 @@ PUB Powered(state): curr_state
     state := ((curr_state & core#SD_MASK) | state) & core#UV_CONF_MASK
     writereg(core#UV_CONF, 2, @state)
 
-PUB UVAData{}: uva
+PUB uvadata{}: uva
 ' Read UV-A sensor data
 '   Returns: 16-bit word
     readreg(core#UVA_DATA, 2, @uva)
 
-PUB UVBData{}: uvb
+PUB uvbdata{}: uvb
 ' Read UV-B sensor data
 '   Returns: 16-bit word
     readreg(core#UVB_DATA, 2, @uvb)
 
-PUB UVIndex{}: uvidx | uva_raw, uva_comp, uvb_raw, uvb_comp, uvcomp1, uvcomp2
+PUB uvindex{}: uvidx | uva_raw, uva_comp, uvb_raw, uvb_comp, uvcomp1, uvcomp2
 ' Return UV Index, in hundredths of a point (e.g. 103 == 1.03)
     uva_raw := uvadata{} * 100
     uvb_raw := uvbdata{} * 100
@@ -185,7 +185,7 @@ PUB UVIndex{}: uvidx | uva_raw, uva_comp, uvb_raw, uvb_comp, uvcomp1, uvcomp2
     uvb_comp := uvb_raw - (CO_C * uvcomp1) - (CO_D * uvcomp2)
     return (((uva_comp * UVA_RESP) + (uvb_comp * UVB_RESP)) / 2) / 1_000_000
 
-PUB VisibleData{}: vis
+PUB visibledata{}: vis
 ' Read Visible sensor data
 '   Returns: 16-bit word
     readreg(core#UVCOMP1, 2, @vis)
