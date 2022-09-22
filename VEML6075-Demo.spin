@@ -29,7 +29,7 @@ OBJ
     cfg     : "core.con.boardcfg.flip"
     ser     : "com.serial.terminal.ansi"
     time    : "time"
-    veml6075: "sensor.uv.veml6075"
+    veml6075: "sensor.light.veml6075"
 
 PUB Main{} | uvidx
 
