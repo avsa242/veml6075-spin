@@ -5,7 +5,7 @@
     Description: Demo of the VEML6075 driver
     Copyright (c) 2022
     Started Aug 18, 2019
-    Updated Aug 20, 2022
+    Updated Sep 26, 2022
     See end of file for terms of use.
     --------------------------------------------
 }
@@ -31,17 +31,17 @@ OBJ
     time    : "time"
     veml6075: "sensor.light.veml6075"
 
-PUB Main{} | uvidx
+PUB main{} | uvidx
 
     setup{}
     veml6075.preset_active{}
 
     repeat
-        uvidx := veml6075.uvindex{}
+        uvidx := veml6075.uv_index{}
         ser.position(0, 3)
         ser.printf2(string("UV Index: %d.%02.2d"), (uvidx / 100), (uvidx // 100))
 
-PUB Setup{}
+PUB setup{}
 
     ser.start(SER_BAUD)
     time.msleep(30)
