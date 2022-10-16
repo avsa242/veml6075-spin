@@ -5,7 +5,7 @@
     Description: Demo of the VEML6075 driver
     Copyright (c) 2022
     Started Aug 18, 2019
-    Updated Sep 26, 2022
+    Updated Oct 16, 2022
     See end of file for terms of use.
     --------------------------------------------
 }
@@ -26,7 +26,7 @@ CON
 
 OBJ
 
-    cfg     : "core.con.boardcfg.flip"
+    cfg     : "boardcfg.flip"
     ser     : "com.serial.terminal.ansi"
     time    : "time"
     veml6075: "sensor.light.veml6075"
