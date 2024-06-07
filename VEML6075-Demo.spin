@@ -1,13 +1,12 @@
 {
-    --------------------------------------------
-    Filename: VEML6075-Demo.spin
-    Author: Jesse Burt
-    Description: Demo of the VEML6075 driver
-    Copyright (c) 2022
-    Started Aug 18, 2019
-    Updated Dec 3, 2022
-    See end of file for terms of use.
-    --------------------------------------------
+----------------------------------------------------------------------------------------------------
+    Filename:       VEML6075-Demo.spin
+    Description:    Demo of the VEML6075 driver
+    Author:         Jesse Burt
+    Started:        Aug 18, 2019
+    Updated:        Jun 7, 2024
+    Copyright (c) 2024 - See end of file for terms of use.
+----------------------------------------------------------------------------------------------------
 }
 
 CON
@@ -24,28 +23,31 @@ CON
     I2C_FREQ    = 400_000
 ' --
 
+
 OBJ
 
-    cfg     : "boardcfg.flip"
-    ser     : "com.serial.terminal.ansi"
-    time    : "time"
-    veml6075: "sensor.light.veml6075"
+    cfg:        "boardcfg.flip"
+    time:       "time"
+    ser:        "com.serial.terminal.ansi"
+    veml6075:   "sensor.light.veml6075"
 
-PUB main{} | uvidx
 
-    setup{}
-    veml6075.preset_active{}
+PUB main() | uvidx
+
+    setup()
+    veml6075.preset_active()
 
     repeat
-        uvidx := veml6075.uv_index{}
+        uvidx := veml6075.uv_index()
         ser.pos_xy(0, 3)
         ser.printf2(string("UV Index: %d.%02.2d"), (uvidx / 100), (uvidx // 100))
 
-PUB setup{}
+
+PUB setup()
 
     ser.start(SER_BAUD)
     time.msleep(30)
-    ser.clear{}
+    ser.clear()
     ser.strln(string("Serial terminal started"))
 
     if veml6075.startx(SCL_PIN, SDA_PIN, I2C_FREQ)
@@ -54,9 +56,10 @@ PUB setup{}
         ser.strln(string("VEML6075 driver failed to start - halting"))
         repeat
 
+
 DAT
 {
-Copyright 2022 Jesse Burt
+Copyright 2024 Jesse Burt
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of this software and
 associated documentation files (the "Software"), to deal in the Software without restriction,

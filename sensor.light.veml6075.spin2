@@ -1,13 +1,12 @@
 {
-    --------------------------------------------
-    Filename: sensor.light.veml6075.spin2
-    Author: Jesse Burt
-    Description: Driver for the Vishay VEML6075 UVA/UVB sensor (P2 version)
-    Copyright (c) 2022
-    Started Nov 14, 2019
-    Updated Sep 26, 2022
-    See end of file for terms of use.
-    --------------------------------------------
+----------------------------------------------------------------------------------------------------
+    Filename:       sensor.light.veml6075.spin2
+    Description:    Driver for the Vishay VEML6075 UVA/UVB sensor
+    Author:         Jesse Burt
+    Started:        Nov 14, 2019
+    Updated:        Jun 7, 2024
+    Copyright (c) 2024 - See end of file for terms of use.
+----------------------------------------------------------------------------------------------------
 }
 
 CON
@@ -34,13 +33,17 @@ CON
     UVA_RESP        = 0_001461
     UVB_RESP        = 0_002591
 
+
 OBJ
 
-    i2c : "com.i2c"                             ' I2C engine
-    core: "core.con.veml6075"                   ' HW-specific constants
+    i2c:    "com.i2c"                           ' I2C engine
+    core:   "core.con.veml6075"                 ' HW-specific constants
+
 
 PUB null()
 ' This is not a top-level object
+
+
 
 PUB startx(SCL_PIN, SDA_PIN, I2C_HZ=DEF_HZ): status
 ' Start using custom settings
@@ -56,11 +59,13 @@ PUB startx(SCL_PIN, SDA_PIN, I2C_HZ=DEF_HZ): status
     ' Lastly - make sure you have at least one free core/cog
     return FALSE
 
+
 PUB stop()
 ' Stop the driver
     powered(FALSE)
     waitms(1)
     i2c.deinit()
+
 
 PUB preset_active()
 ' Enable sensor power, set to 100ms integration time, continuous measurements
@@ -69,11 +74,13 @@ PUB preset_active()
     integr_time(100)
     opmode(CONT)
 
+
 PUB dev_id(): id
 ' Device ID of the chip
 '   Known values: $0026
     id := 0
     readreg(core.DEV_ID, 2, @id)
+
 
 PUB dynamic(level): curr_lvl
 ' Set sensor dynamic
@@ -84,11 +91,11 @@ PUB dynamic(level): curr_lvl
     case level
         DYNAMIC_NORM, DYNAMIC_HI:
             level <<= core.HD
+            level := ((curr_lvl & core.HD_MASK) | level) & core.UV_CONF_MASK
+            writereg(core.UV_CONF, 2, @level)
         other:
             return (curr_lvl >> core.HD) & 1
 
-    level := ((curr_lvl & core.HD_MASK) | level) & core.UV_CONF_MASK
-    writereg(core.UV_CONF, 2, @level)
 
 PUB integr_time(itime): curr_itime
 ' Set sensor ADC integration time, in ms
@@ -99,17 +106,18 @@ PUB integr_time(itime): curr_itime
     case itime
         50, 100, 200, 400, 800:
             itime := lookdownz(itime: 50, 100, 200, 400, 800) << core.UV_IT
+            itime := ((curr_itime & core.UV_IT_MASK) | itime) & core.UV_CONF_MASK
+            writereg(core.UV_CONF, 2, @itime)
         other:
             curr_itime := (curr_itime >> core.UV_IT) & core.UV_IT
             return lookupz(curr_itime: 50, 100, 200, 400, 800)
 
-    itime := ((curr_itime & core.UV_IT_MASK) | itime) & core.UV_CONF_MASK
-    writereg(core.UV_CONF, 2, @itime)
 
 PUB ir_data(): ir
 ' Read Infrared sensor data
 '   Returns: 16-bit word
     readreg(core.UVCOMP2, 2, @ir)
+
 
 PUB measure() | tmp
 ' Trigger a single measurement
@@ -119,6 +127,7 @@ PUB measure() | tmp
     tmp.byte[0] |= (1 << core.UV_TRIG)
     tmp.byte[1] := 0
     writereg(core.UV_CONF, 2, @tmp)
+
 
 PUB opmode(mode): curr_mode
 ' Set measurement mode
@@ -133,11 +142,11 @@ PUB opmode(mode): curr_mode
     case mode
         CONT, SINGLE:
             mode <<= core.UV_AF
+            mode := ((curr_mode & core.UV_AF_MASK) | mode) & core.UV_CONF_MASK
+            writereg(core.UV_CONF, 2, @mode)
         other:
             return (curr_mode >> core.UV_AF) & 1
 
-    mode := ((curr_mode & core.UV_AF_MASK) | mode) & core.UV_CONF_MASK
-    writereg(core.UV_CONF, 2, @mode)
 
 PUB powered(state): curr_state
 ' Power on sensor
@@ -150,21 +159,23 @@ PUB powered(state): curr_state
     case abs(state)
         0, 1:
             state := (abs(state) ^ 1) & 1       ' logic on chip is inverted,
+            state := ((curr_state & core.SD_MASK) | state) & core.UV_CONF_MASK
+            writereg(core.UV_CONF, 2, @state)
         other:                                  ' so flip the bit
             return ((curr_state & 1) == 1)
 
-    state := ((curr_state & core.SD_MASK) | state) & core.UV_CONF_MASK
-    writereg(core.UV_CONF, 2, @state)
 
 PUB uva_data(): uva
 ' Read UV-A sensor data
 '   Returns: 16-bit word
     readreg(core.UVA_DATA, 2, @uva)
 
+
 PUB uvb_data(): uvb
 ' Read UV-B sensor data
 '   Returns: 16-bit word
     readreg(core.UVB_DATA, 2, @uvb)
+
 
 PUB uv_index(): uvidx | uva_raw, uva_comp, uvb_raw, uvb_comp, uvcomp1, uvcomp2
 ' Return UV Index, in hundredths of a point (e.g. 103 == 1.03)
@@ -177,10 +188,12 @@ PUB uv_index(): uvidx | uva_raw, uva_comp, uvb_raw, uvb_comp, uvcomp1, uvcomp2
     uvb_comp := uvb_raw - (CO_C * uvcomp1) - (CO_D * uvcomp2)
     return (((uva_comp * UVA_RESP) + (uvb_comp * UVB_RESP)) / 2) / 1_000_000
 
+
 PUB white_data(): w
 ' Read white/visible sensor data
 '   Returns: 16-bit word
     readreg(core.UVCOMP1, 2, @w)
+
 
 PRI present(): flag
 ' Flag indicating the device responds on the I2C bus
@@ -188,6 +201,7 @@ PRI present(): flag
     flag := i2c.write(SLAVE_WR)
     i2c.stop()                                  ' <P> needed by this device
     return (flag == i2c.ACK)
+
 
 PRI readreg(reg_nr, nr_bytes, ptr_buff) | cmd_pkt
 ' Read nr_bytes from slave device into ptr_buff
@@ -203,6 +217,7 @@ PRI readreg(reg_nr, nr_bytes, ptr_buff) | cmd_pkt
         other:
             return
 
+
 PRI writereg(reg_nr, nr_bytes, ptr_buff) | cmd_pkt
 ' Write nr_bytes from ptr_buff to slave device
     case reg_nr
@@ -216,9 +231,10 @@ PRI writereg(reg_nr, nr_bytes, ptr_buff) | cmd_pkt
         other:
             return
 
+
 DAT
 {
-Copyright 2022 Jesse Burt
+Copyright 2024 Jesse Burt
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of this software and
 associated documentation files (the "Software"), to deal in the Software without restriction,
