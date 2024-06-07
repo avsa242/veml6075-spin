@@ -9,6 +9,10 @@
 ----------------------------------------------------------------------------------------------------
 }
 
+' Uncomment the next two lines to use the bytecode-based I2C engine in the driver.
+#define VEML6075_I2C_BC
+#pragma exportdef(VEML6075_I2C_BC)
+
 CON
 
     _clkmode    = cfg._clkmode
