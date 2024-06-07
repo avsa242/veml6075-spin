@@ -11,25 +11,16 @@
 
 CON
 
-    _clkmode    = cfg#_clkmode
-    _xinfreq    = cfg#_xinfreq
-
-' -- User-modifiable constants
-    LED         = cfg#LED1
-    SER_BAUD    = 115_200
-
-    SCL_PIN     = 28
-    SDA_PIN     = 29
-    I2C_FREQ    = 400_000
-' --
+    _clkmode    = cfg._clkmode
+    _xinfreq    = cfg._xinfreq
 
 
 OBJ
 
     cfg:        "boardcfg.flip"
     time:       "time"
-    ser:        "com.serial.terminal.ansi"
-    veml6075:   "sensor.light.veml6075"
+    ser:        "com.serial.terminal.ansi" | SER_BAUD=115_200
+    veml6075:   "sensor.light.veml6075" | SCL=28, SDA=29, I2C_FREQ=400_000
 
 
 PUB main() | uvidx
@@ -40,20 +31,20 @@ PUB main() | uvidx
     repeat
         uvidx := veml6075.uv_index()
         ser.pos_xy(0, 3)
-        ser.printf2(string("UV Index: %d.%02.2d"), (uvidx / 100), (uvidx // 100))
+        ser.printf2(@"UV Index: %d.%02.2d", (uvidx / 100), (uvidx // 100))
 
 
 PUB setup()
 
-    ser.start(SER_BAUD)
+    ser.start()
     time.msleep(30)
     ser.clear()
-    ser.strln(string("Serial terminal started"))
+    ser.strln(@"Serial terminal started")
 
-    if veml6075.startx(SCL_PIN, SDA_PIN, I2C_FREQ)
-        ser.strln(string("VEML6075 driver started"))
+    if ( veml6075.start() )
+        ser.strln(@"VEML6075 driver started")
     else
-        ser.strln(string("VEML6075 driver failed to start - halting"))
+        ser.strln(@"VEML6075 driver failed to start - halting")
         repeat
 
 

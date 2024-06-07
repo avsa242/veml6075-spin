@@ -11,6 +11,22 @@
 
 CON
 
+    { default I/O configuration - these can be overridden by the parent object }
+    SCL             = 28
+    SDA             = 29
+    I2C_FREQ        = 100_000
+
+
+    { dynamic() settings }
+    DYNAMIC_NORM    = 0
+    DYNAMIC_HI      = 1
+
+    { opmode() modes }
+    CONT            = 0
+    SINGLE          = 1
+
+
+
     SLAVE_WR        = core.SLAVE_ADDR
     SLAVE_RD        = core.SLAVE_ADDR|1
 
@@ -18,22 +34,6 @@ CON
     DEF_SDA         = 29
     DEF_HZ          = 100_000
     I2C_MAX_FREQ    = core.I2C_MAX_FREQ
-
-' Dynamic settings
-    DYNAMIC_NORM    = 0
-    DYNAMIC_HI      = 1
-
-' Measurement modes
-    CONT            = 0
-    SINGLE          = 1
-
-' Coefficients for calculating UV Index
-    CO_A            = 2_22
-    CO_B            = 1_33
-    CO_C            = 2_95
-    CO_D            = 1_74
-    UVA_RESP        = 0_001461
-    UVB_RESP        = 0_002591
 
 
 OBJ
@@ -48,18 +48,18 @@ PUB null()
 
 
 PUB start(): status
-' Start using "standard" Propeller I2C pins and 100kHz
-    return startx(DEF_SCL, DEF_SDA, DEF_HZ)
+' Start using default I/O settings
+    return startx(SCL, SDA, I2C_FREQ)
 
 
 PUB startx(SCL_PIN, SDA_PIN, I2C_HZ): status
 ' Start using custom settings
-    if lookdown(SCL_PIN: 0..31) and lookdown(SDA_PIN: 0..31) and I2C_HZ =< core.I2C_MAX_FREQ
-        if (status := i2c.init(SCL_PIN, SDA_PIN, I2C_HZ))
+    if ( lookdown(SCL_PIN: 0..31) and lookdown(SDA_PIN: 0..31) )
+        if ( status := i2c.init(SCL_PIN, SDA_PIN, I2C_HZ) )
             time.usleep(core.T_POR)
             i2c.stop()                          ' attempt to make startup
             i2c.write($ff)                      '   more reliable
-            if (dev_id() == core.DEV_ID_RESP)
+            if ( dev_id() == core.DEV_ID_RESP )
                 return
     ' if this point is reached, something above failed
     ' Double check I/O pin assignments, connections, power
@@ -183,6 +183,16 @@ PUB uvb_data(): uvb
 '   Returns: 16-bit word
     readreg(core.UVB_DATA, 2, @uvb)
 
+
+CON
+
+    { Coefficients for calculating UV Index }
+    CO_A            = 2_22
+    CO_B            = 1_33
+    CO_C            = 2_95
+    CO_D            = 1_74
+    UVA_RESP        = 0_001461
+    UVB_RESP        = 0_002591
 
 PUB uv_index(): uvidx | uva_raw, uva_comp, uvb_raw, uvb_comp, uvcomp1, uvcomp2
 ' Return UV Index, in hundredths of a point (e.g. 103 == 1.03)
