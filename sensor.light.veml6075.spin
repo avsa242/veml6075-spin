@@ -98,10 +98,10 @@ PUB dynamic(level): curr_lvl
     case level
         DYNAMIC_NORM, DYNAMIC_HI:
             level <<= core.HD
-            level := ((curr_lvl & core.HD_MASK) | level) & core.UV_CONF_MASK
+            level := ((curr_lvl & core.HD_MASK) | level)
             writereg(core.UV_CONF, 2, @level)
         other:
-            return (curr_lvl >> core.HD) & 1
+            return ( (curr_lvl >> core.HD) & 1 )
 
 
 PUB integr_time(itime): curr_itime
@@ -113,10 +113,10 @@ PUB integr_time(itime): curr_itime
     case itime
         50, 100, 200, 400, 800:
             itime := lookdownz(itime: 50, 100, 200, 400, 800) << core.UV_IT
-            itime := ((curr_itime & core.UV_IT_MASK) | itime) & core.UV_CONF_MASK
+            itime := ((curr_itime & core.UV_IT_MASK) | itime)
             writereg(core.UV_CONF, 2, @itime)
         other:
-            curr_itime := (curr_itime >> core.UV_IT) & core.UV_IT
+            curr_itime := (curr_itime >> core.UV_IT) & core.UV_IT_BITS
             return lookupz(curr_itime: 50, 100, 200, 400, 800)
 
 
@@ -149,10 +149,10 @@ PUB opmode(mode): curr_mode
     case mode
         CONT, SINGLE:
             mode <<= core.UV_AF
-            mode := ((curr_mode & core.UV_AF_MASK) | mode) & core.UV_CONF_MASK
+            mode := ((curr_mode & core.UV_AF_MASK) | mode)
             writereg(core.UV_CONF, 2, @mode)
         other:
-            return (curr_mode >> core.UV_AF) & 1
+            return ( (curr_mode >> core.UV_AF) & 1 )
 
 
 PUB powered(state): curr_state
@@ -166,10 +166,10 @@ PUB powered(state): curr_state
     case ||(state)
         0, 1:
             state := (||(state) ^ 1) & 1        ' logic on chip is inverted,
-            state := ((curr_state & core.SD_MASK) | state) & core.UV_CONF_MASK
+            state := ((curr_state & core.SD_MASK) | state)
             writereg(core.UV_CONF, 2, @state)
         other:                                  ' so flip the bit
-            return ((curr_state & 1) == 1)
+            return ( (curr_state & 1) == 1 )
 
 
 PUB uva_data(): uva
@@ -217,7 +217,7 @@ PRI present(): flag
     i2c.start()
     flag := i2c.write(SLAVE_WR)
     i2c.stop()                                  ' <P> needed by this device
-    return (flag == i2c.ACK)
+    return ( flag == i2c.ACK )
 
 
 PRI readreg(reg_nr, nr_bytes, ptr_buff) | cmd_pkt
