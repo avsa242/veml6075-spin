@@ -4,8 +4,8 @@
     Description:    Driver for the Vishay VEML6075 UVA/UVB sensor
     Author:         Jesse Burt
     Started:        Aug 18, 2019
-    Updated:        Jun 7, 2024
-    Copyright (c) 2024 - See end of file for terms of use.
+    Updated:        Nov 21, 2025
+    Copyright (c) 2025 - See end of file for terms of use.
 ----------------------------------------------------------------------------------------------------
 }
 
@@ -90,21 +90,19 @@ PUB preset_active()
 PUB dev_id(): id
 ' Device ID of the chip
 '   Known values: $0026
-    id := 0
-    readreg(core.DEV_ID, 2, @id)
+    return readreg(core.DEV_ID)
 
 
 PUB dynamic(level): curr_lvl
 ' Set sensor dynamic
 '   Valid values: DYNAMIC_NORM (0), DYNAMIC_HI (1)
 '   Any other value polls the chip and returns the current setting
-    curr_lvl := 0
-    readreg(core.UV_CONF, 2, @curr_lvl)
+    curr_lvl := readreg(core.UV_CONF)
     case level
         DYNAMIC_NORM, DYNAMIC_HI:
             level <<= core.HD
             level := ((curr_lvl & core.HD_MASK) | level)
-            writereg(core.UV_CONF, 2, @level)
+            writereg(core.UV_CONF, level)
         other:
             return ( (curr_lvl >> core.HD) & 1 )
 
@@ -113,13 +111,12 @@ PUB integr_time(itime): curr_itime
 ' Set sensor ADC integration time, in ms
 '   Valid values: 50, 100, 200, 400, 800
 '   Any other value polls the chip and returns the current setting
-    curr_itime := 0
-    readreg(core.UV_CONF, 2, @curr_itime)
+    curr_itime := readreg(core.UV_CONF)
     case itime
         50, 100, 200, 400, 800:
             itime := lookdownz(itime: 50, 100, 200, 400, 800) << core.UV_IT
             itime := ((curr_itime & core.UV_IT_MASK) | itime)
-            writereg(core.UV_CONF, 2, @itime)
+            writereg(core.UV_CONF, itime)
         other:
             curr_itime := (curr_itime >> core.UV_IT) & core.UV_IT_BITS
             return lookupz(curr_itime: 50, 100, 200, 400, 800)
@@ -128,17 +125,16 @@ PUB integr_time(itime): curr_itime
 PUB ir_data(): ir
 ' Read Infrared sensor data
 '   Returns: 16-bit word
-    readreg(core.UVCOMP2, 2, @ir)
+    return readreg(core.UVCOMP2)
 
 
 PUB measure() | tmp
 ' Trigger a single measurement
 '   NOTE: For use when opmode() is set to SINGLE
-    tmp := 0
-    readreg(core.UV_CONF, 2, @tmp)
+    tmp := readreg(core.UV_CONF)
     tmp.byte[0] |= (1 << core.UV_TRIG)
     tmp.byte[1] := 0
-    writereg(core.UV_CONF, 2, @tmp)
+    writereg(core.UV_CONF, tmp)
 
 
 PUB opmode(mode): curr_mode
@@ -149,13 +145,12 @@ PUB opmode(mode): curr_mode
 '   Any other value polls the chip and returns the current setting
 '   NOTE: In SINGLE mode, measurements must be triggered manually using the
 '       measure() method
-    curr_mode := 0
-    readreg(core.UV_CONF, 2, @curr_mode)
+    curr_mode := readreg(core.UV_CONF)
     case mode
         CONT, SINGLE:
             mode <<= core.UV_AF
             mode := ((curr_mode & core.UV_AF_MASK) | mode)
-            writereg(core.UV_CONF, 2, @mode)
+            writereg(core.UV_CONF, mode)
         other:
             return ( (curr_mode >> core.UV_AF) & 1 )
 
@@ -166,13 +161,12 @@ PUB powered(state): curr_state
 '       TRUE (-1 or 1): Power on
 '       FALSE (0): Power off
 '   Any other value polls the chip and returns the current setting
-    curr_state := 0
-    readreg(core.UV_CONF, 2, @curr_state)
+    curr_state := readreg(core.UV_CONF)
     case ||(state)
         0, 1:
             state := (||(state) ^ 1) & 1        ' logic on chip is inverted,
             state := ((curr_state & core.SD_MASK) | state)
-            writereg(core.UV_CONF, 2, @state)
+            writereg(core.UV_CONF, state)
         other:                                  ' so flip the bit
             return ( (curr_state & 1) == 1 )
 
@@ -180,13 +174,13 @@ PUB powered(state): curr_state
 PUB uva_data(): uva
 ' Read UV-A sensor data
 '   Returns: 16-bit word
-    readreg(core.UVA_DATA, 2, @uva)
+    return readreg(core.UVA_DATA)
 
 
 PUB uvb_data(): uvb
 ' Read UV-B sensor data
 '   Returns: 16-bit word
-    readreg(core.UVB_DATA, 2, @uvb)
+    return readreg(core.UVB_DATA)
 
 
 CON
@@ -214,7 +208,7 @@ PUB uv_index(): uvidx | uva_raw, uva_comp, uvb_raw, uvb_comp, uvcomp1, uvcomp2
 PUB white_data(): w
 ' Read white/visible sensor data
 '   Returns: 16-bit word
-    readreg(core.UVCOMP1, 2, @w)
+    return readreg(core.UVCOMP1)
 
 
 PRI present(): flag
@@ -225,30 +219,28 @@ PRI present(): flag
     return ( flag == i2c.ACK )
 
 
-PRI readreg(reg_nr, nr_bytes, ptr_buff) | cmd_pkt
+PRI readreg(reg_nr): v | cmd_pkt
 ' Read nr_bytes from slave device into ptr_buff
-    case reg_nr
-        core.UV_CONF, core.UVA_DATA..core.DEV_ID:
-            cmd_pkt.byte[0] := SLAVE_WR
-            cmd_pkt.byte[1] := reg_nr
-            i2c.start()
-            i2c.wrblock_lsbf(@cmd_pkt, 2)
-            i2c.wait(SLAVE_RD)
-            i2c.rdblock_lsbf(ptr_buff, nr_bytes, i2c.NAK)
-            i2c.stop()
-        other:
-            return
+    cmd_pkt.byte[0] := SLAVE_WR
+    cmd_pkt.byte[1] := reg_nr
+    v := 0
+    i2c.start()
+    i2c.wrblock_lsbf(@cmd_pkt, 2)
+    i2c.wait(SLAVE_RD)
+    i2c.rdblock_lsbf(@v, 2, i2c.NAK)
+    i2c.stop()
 
 
-PRI writereg(reg_nr, nr_bytes, ptr_buff) | cmd_pkt
+PRI writereg(reg_nr, val) | cmd_pkt
 ' Write nr_bytes from ptr_buff to slave device
     case reg_nr
         core.UV_CONF:
             cmd_pkt.byte[0] := SLAVE_WR
             cmd_pkt.byte[1] := reg_nr
+            cmd_pkt.byte[2] := val.byte[0]
+            cmd_pkt.byte[3] := val.byte[1]
             i2c.start()
-            i2c.wrblock_lsbf(@cmd_pkt, 2)
-            i2c.wrblock_lsbf(ptr_buff, nr_bytes)
+            i2c.wrblock_lsbf(@cmd_pkt, 4)
             i2c.stop()
         other:
             return
@@ -256,7 +248,7 @@ PRI writereg(reg_nr, nr_bytes, ptr_buff) | cmd_pkt
 
 DAT
 {
-Copyright 2024 Jesse Burt
+Copyright 2025 Jesse Burt
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of this software and
 associated documentation files (the "Software"), to deal in the Software without restriction,
