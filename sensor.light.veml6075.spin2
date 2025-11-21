@@ -41,7 +41,7 @@ PUB start(): status
     return startx(SCL, SDA, I2C_FREQ)
 
 
-PUB startx(SCL_PIN, SDA_PIN, I2C_HZ=DEF_HZ): status
+PUB startx(SCL_PIN, SDA_PIN, I2C_HZ): status
 ' Start using custom settings
     if ( lookdown(SCL_PIN: 0..63) and lookdown(SDA_PIN: 0..63) )
         if ( status := i2c.init(SCL_PIN, SDA_PIN, I2C_HZ) )
