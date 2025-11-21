@@ -17,23 +17,13 @@ CON
     I2C_FREQ        = 100_000
 
 
-    { dynamic() settings }
-    DYNAMIC_NORM    = 0
-    DYNAMIC_HI      = 1
-
     { opmode() modes }
     CONT            = 0
     SINGLE          = 1
 
 
-
     SLAVE_WR        = core.SLAVE_ADDR
     SLAVE_RD        = core.SLAVE_ADDR|1
-
-    DEF_SCL         = 0
-    DEF_SDA         = 1
-    DEF_HZ          = 100_000
-    I2C_MAX_FREQ    = core.I2C_MAX_FREQ
 
 
 OBJ
@@ -76,7 +66,7 @@ PUB stop()
 PUB preset_active()
 ' Enable sensor power, set to 100ms integration time, continuous measurements
     powered(TRUE)
-    dynamic(DYNAMIC_NORM)
+    dynamic(DR_NORMAL)
     integr_time(100)
     opmode(CONT)
 
@@ -87,36 +77,42 @@ PUB dev_id(): id
     return readreg(core.DEV_ID)
 
 
-PUB dynamic(level): curr_lvl
-' Set sensor dynamic
-'   Valid values: DYNAMIC_NORM (0), DYNAMIC_HI (1)
+con
+
+    ' dynamic() settings
+    DR_NORMAL    = 0
+    DR_HIGH      = 1
+
+PUB dynamic(dr=-2): c
+' Set sensor dynamic range
+'   Valid values: DR_NORMAL (0), DR_HIGH (1)
 '   Any other value polls the chip and returns the current setting
-    curr_lvl := readreg(core.UV_CONF)
-    case level
-        DYNAMIC_NORM, DYNAMIC_HI:
-            level <<= core.HD
-            level := ((curr_lvl & core.HD_MASK) | level)
-            writereg(core.UV_CONF, level)
+    c := readreg(core.UV_CONF)
+    case dr
+        DR_NORMAL, DR_HIGH:
+            dr <<= core.HD
+            dr := ((c & core.HD_MASK) | dr)
+            writereg(core.UV_CONF, dr)
         other:
-            return ( (curr_lvl >> core.HD) & 1 )
+            return ( (c >> core.HD) & 1 )
 
 
-PUB integr_time(itime): curr_itime
+PUB integr_time(t=-2): c
 ' Set sensor ADC integration time, in ms
 '   Valid values: 50, 100, 200, 400, 800
 '   Any other value polls the chip and returns the current setting
-    curr_itime := readreg(core.UV_CONF)
-    case itime
+    c := readreg(core.UV_CONF)
+    case t
         50, 100, 200, 400, 800:
-            itime := lookdownz(itime: 50, 100, 200, 400, 800) << core.UV_IT
-            itime := ((curr_itime & core.UV_IT_MASK) | itime)
-            writereg(core.UV_CONF, itime)
+            t := lookdownz(t: 50, 100, 200, 400, 800) << core.UV_IT
+            t := ((c & core.UV_IT_MASK) | t)
+            writereg(core.UV_CONF, t)
         other:
-            curr_itime := (curr_itime >> core.UV_IT) & core.UV_IT_BITS
-            return lookupz(curr_itime: 50, 100, 200, 400, 800)
+            c := (c >> core.UV_IT) & core.UV_IT_BITS
+            return lookupz(c: 50, 100, 200, 400, 800)
 
 
-PUB ir_data(): ir
+PUB ir_data(): d
 ' Read Infrared sensor data
 '   Returns: 16-bit word
     return readreg(core.UVCOMP2)
@@ -131,7 +127,7 @@ PUB measure() | tmp
     writereg(core.UV_CONF, tmp)
 
 
-PUB opmode(mode): curr_mode
+PUB opmode(md=-2): c
 ' Set measurement mode
 '   Valid values:
 '       CONT (0): Continuous measurement mode
@@ -139,39 +135,39 @@ PUB opmode(mode): curr_mode
 '   Any other value polls the chip and returns the current setting
 '   NOTE: In SINGLE mode, measurements must be triggered manually using the
 '       measure() method
-    curr_mode := readreg(core.UV_CONF)
-    case mode
+    c := readreg(core.UV_CONF)
+    case md
         CONT, SINGLE:
-            mode <<= core.UV_AF
-            mode := ((curr_mode & core.UV_AF_MASK) | mode)
-            writereg(core.UV_CONF, mode)
+            md <<= core.UV_AF
+            md := ((c & core.UV_AF_MASK) | md)
+            writereg(core.UV_CONF, md)
         other:
-            return ( (curr_mode >> core.UV_AF) & 1 )
+            return ( (c >> core.UV_AF) & 1 )
 
 
-PUB powered(state): curr_state
+PUB powered(p=-2): c
 ' Power on sensor
 '   Valid values:
 '       TRUE (-1 or 1): Power on
 '       FALSE (0): Power off
 '   Any other value polls the chip and returns the current setting
-    curr_state := readreg(core.UV_CONF)
-    case abs(state)
+    c := readreg(core.UV_CONF)
+    case abs(p)
         0, 1:
-            state := (abs(state) ^ 1) & 1       ' logic on chip is inverted,
-            state := ((curr_state & core.SD_MASK) | state)
-            writereg(core.UV_CONF, state)
+            p := (abs(p) ^ 1) & 1               ' logic on chip is inverted,
+            p := ((c & core.SD_MASK) | p)
+            writereg(core.UV_CONF, p)
         other:                                  ' so flip the bit
-            return ( (curr_state & 1) == 1 )
+            return ( (c & 1) == 1 )
 
 
-PUB uva_data(): uva
+PUB uva_data(): d
 ' Read UV-A sensor data
 '   Returns: 16-bit word
     return readreg(core.UVA_DATA)
 
 
-PUB uvb_data(): uvb
+PUB uvb_data(): d
 ' Read UV-B sensor data
 '   Returns: 16-bit word
     return readreg(core.UVB_DATA)
@@ -187,7 +183,7 @@ CON
     UVA_RESP        = 0_001461
     UVB_RESP        = 0_002591
 
-PUB uv_index(): uvidx | uva_raw, uva_comp, uvb_raw, uvb_comp, uvcomp1, uvcomp2
+PUB uv_index(): i | uva_raw, uva_comp, uvb_raw, uvb_comp, uvcomp1, uvcomp2
 ' Return UV Index, in hundredths of a point (e.g. 103 == 1.03)
     uva_raw := uva_data() * 100
     uvb_raw := uvb_data() * 100
@@ -205,12 +201,12 @@ PUB white_data(): w
     return readreg(core.UVCOMP1)
 
 
-PRI present(): flag
+PRI present(): p
 ' Flag indicating the device responds on the I2C bus
     i2c.start()
-    flag := i2c.write(SLAVE_WR)
+    p := i2c.write(SLAVE_WR)
     i2c.stop()                                  ' <P> needed by this device
-    return ( flag == i2c.ACK )
+    return ( p == i2c.ACK )
 
 
 PRI readreg(reg_nr): v | cmd_pkt
