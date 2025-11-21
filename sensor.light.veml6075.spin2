@@ -201,14 +201,6 @@ PUB white_data(): w
     return readreg(core.UVCOMP1)
 
 
-PRI present(): p
-' Flag indicating the device responds on the I2C bus
-    i2c.start()
-    p := i2c.write(SLAVE_WR)
-    i2c.stop()                                  ' <P> needed by this device
-    return ( p == i2c.ACK )
-
-
 PRI readreg(reg_nr): v | cmd_pkt
 ' Read nr_bytes from slave device into ptr_buff
     cmd_pkt.byte[0] := SLAVE_WR
