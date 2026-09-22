@@ -4,8 +4,8 @@
     Description:    Driver for the Vishay VEML6075 UVA/UVB sensor
     Author:         Jesse Burt
     Started:        Aug 18, 2019
-    Updated:        Nov 21, 2025
-    Copyright (c) 2025 - See end of file for terms of use.
+    Updated:        Sep 22, 2026
+    Copyright (c) 2026 - See end of file for terms of use.
 ----------------------------------------------------------------------------------------------------
 }
 
@@ -54,6 +54,7 @@ PUB startx(SCL_PIN, SDA_PIN, I2C_HZ): status
             time.usleep(core.T_POR)
             i2c.stop()                          ' attempt to make startup
             i2c.write($ff)                      '   more reliable
+            powered(true)
             if ( dev_id() == core.DEV_ID_RESP )
                 return
     ' if this point is reached, something above failed
@@ -236,7 +237,7 @@ PRI writereg(reg_nr, val) | cmd_pkt
 
 DAT
 {
-Copyright 2025 Jesse Burt
+Copyright 2026 Jesse Burt
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of this software and
 associated documentation files (the "Software"), to deal in the Software without restriction,
